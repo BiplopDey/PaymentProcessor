@@ -14,17 +14,16 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
-public class KafkaConsumerService {
-    private final Logger logger = LoggerFactory.getLogger(KafkaConsumerService.class);
+public class PaymentConsumerService {
+    private final Logger logger = LoggerFactory.getLogger(PaymentConsumerService.class);
 
     @Autowired
-    PaymentService paymentService;
+    private PaymentService paymentService;
     @Autowired
-    ExternalLoggingService externalLoggingService;
+    private ExternalLoggingService externalLoggingService;
 
     @KafkaListener(topics = {"online", "offline"}, groupId = "group_id", containerFactory = "kafkaListenerContainerFactory")
     public void consume(PaymentEvent event) {
-
         try {
             validate(event);
             logger.info(event.toString());
