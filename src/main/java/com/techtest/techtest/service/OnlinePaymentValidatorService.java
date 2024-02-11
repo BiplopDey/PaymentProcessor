@@ -1,16 +1,18 @@
-package com.techtest.techtest;
+package com.techtest.techtest.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.PaymentProcessingException;
+import com.techtest.techtest.RestCallUtil;
 import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 
 @Component
-public class OnlinePaymentValidator {
+public class OnlinePaymentValidatorService {
     @Autowired
     private RestCallUtil rest;
 

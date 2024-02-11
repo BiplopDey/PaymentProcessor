@@ -1,6 +1,5 @@
 package com.techtest.techtest.service;
 
-import com.techtest.techtest.OnlinePaymentValidator;
 import com.techtest.techtest.PaymentEvent;
 import com.techtest.techtest.PaymentProcessingException;
 import com.techtest.techtest.model.Account;
@@ -20,7 +19,7 @@ public class PaymentService {
     @Autowired
     private AccountRepository accountRepository;
     @Autowired
-    private OnlinePaymentValidator validator;
+    private OnlinePaymentValidatorService validator;
 
     public void process(PaymentEvent paymentEvent) throws Exception {
         var account = updateLastPaymentDateAndGet(paymentEvent.getAccount_id());
