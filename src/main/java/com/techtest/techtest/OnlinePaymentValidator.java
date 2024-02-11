@@ -12,19 +12,16 @@ import java.math.BigDecimal;
 @Component
 public class OnlinePaymentValidator {
     @Autowired
-    private RestTemplate restTemplate;
+    private RestCallUtil rest;
 
-    public boolean validate(PaymentEvent paymentEvent) {
+    public boolean validate(PaymentEvent paymentEvent) throws Exception {
         String url = "http://localhost:9000/payment"; //TODO: inject from properties
-        ResponseEntity<String> response = post(url, map(paymentEvent));
-        return response.getStatusCode().is2xxSuccessful();
-    }
-
-    private ResponseEntity<String> post(String url, PaymentRequest paymentRequest) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<PaymentRequest> entity = new HttpEntity<>(paymentRequest, headers);
-        return  restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        try{
+            ResponseEntity<String> response = rest.post(url, map(paymentEvent));
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e){
+            throw PaymentProcessingException.networkTypeError(paymentEvent.getPayment_id(), "network failed to validate. message:"+ e.getMessage());
+        }
     }
 
     private PaymentRequest map(PaymentEvent paymentEvent) {
