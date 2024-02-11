@@ -27,6 +27,11 @@ public class PaymentService {
         if(payment.getPaymentType().equals("offline")){//TODO: use enum
             paymentRepository.save(payment);
         }
+        if(payment.getPaymentType().equals("online")){
+            if(validator.validate(paymentEvent)){
+                paymentRepository.save(payment);
+            }
+        }
     }
 
     private static Payment map(PaymentEvent paymentEvent, Account account) {
