@@ -1,4 +1,4 @@
-package com.techtest.techtest;
+package com.techtest.techtest.service.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

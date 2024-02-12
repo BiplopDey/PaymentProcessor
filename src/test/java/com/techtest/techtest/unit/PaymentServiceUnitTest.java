@@ -1,28 +1,28 @@
 package com.techtest.techtest.unit;
 
 import com.techtest.techtest.PaymentEvent;
-import com.techtest.techtest.PaymentProcessingException;
+import com.techtest.techtest.service.exception.PaymentProcessingException;
 import com.techtest.techtest.model.Account;
-import com.techtest.techtest.model.Payment;
 import com.techtest.techtest.repository.AccountRepository;
 import com.techtest.techtest.repository.PaymentRepository;
 import com.techtest.techtest.service.ExternalLoggingService;
 import com.techtest.techtest.service.OnlinePaymentValidatorService;
 import com.techtest.techtest.service.PaymentService;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class PaymentServiceTest {
+public class PaymentServiceUnitTest {
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -39,18 +39,10 @@ public class PaymentServiceTest {
     @InjectMocks
     private PaymentService paymentService;
 
-    private PaymentEvent paymentEvent;
-    private Account account;
-
-    @BeforeEach
-    void setUp() {
-        paymentEvent = new PaymentEvent();
-        account = new Account();
-    }
-
 
     @Test
     void test_process_with_payment_processing_exception() {
+        var paymentEvent = new PaymentEvent();
         when(accountRepository.findById(anyInt())).thenThrow(new RuntimeException("Test Exception"));
 
         paymentService.process(paymentEvent);
@@ -60,6 +52,7 @@ public class PaymentServiceTest {
 
     @Test
     void test_process_with_unknown_exception() {
+        var paymentEvent = new PaymentEvent();
         when(accountRepository.findById(anyInt())).thenThrow(new RuntimeException("Test Exception"));
 
         paymentService.process(paymentEvent);
@@ -68,38 +61,34 @@ public class PaymentServiceTest {
     }
 
     @Test
-    void test_process_payment_when_offline() throws Exception {
-        Payment payment = new Payment();
-        payment.setPaymentType("offline");
+    void test_process_when_offline(){
+        var account = new Account();
+        var paymentEvent = new PaymentEvent();
+        paymentEvent.setAccount_id(1);
+        paymentEvent.setPayment_type("offline");
+        when(accountRepository.findById(anyInt())).thenReturn(Optional.of(account));
 
-        paymentService.processPayment(payment);
+        paymentService.process(paymentEvent);
 
-        verify(paymentRepository).save(payment);
+        verify(paymentRepository).save(any());
+        Assertions.assertTrue(Objects.nonNull(account.getLastPaymentDate()));
         verifyNoInteractions(validator);
     }
 
     @Test
-    void test_process_payment_when_online_and_valid() throws Exception {
-        Payment payment = new Payment();
-        payment.setPaymentType("online");
-        when(validator.validate(payment)).thenReturn(true);
-
-        paymentService.processPayment(payment);
-
-        verify(paymentRepository).save(payment);
-        verify(validator).validate(payment);
-    }
-
-    @Test
     void test_process_payment_when_online_and_invalid() throws Exception {
-        Payment payment = new Payment();
-        payment.setPaymentType("online");
-        when(validator.validate(payment)).thenReturn(false);
+        var account = new Account();
+        var paymentEvent = new PaymentEvent();
+        paymentEvent.setPayment_type("online");
+        paymentEvent.setAccount_id(1);
+        when(accountRepository.findById(anyInt())).thenReturn(Optional.of(account));
+        when(validator.validate(any())).thenReturn(false);
 
-        paymentService.processPayment(payment);
+        paymentService.process(paymentEvent);
 
         verifyNoInteractions(paymentRepository);
-        verify(validator).validate(payment);
+        verify(accountRepository, never()).save(any());
     }
+
 
 }

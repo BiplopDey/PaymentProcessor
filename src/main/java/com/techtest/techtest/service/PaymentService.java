@@ -1,7 +1,8 @@
 package com.techtest.techtest.service;
 
 import com.techtest.techtest.PaymentEvent;
-import com.techtest.techtest.PaymentProcessingException;
+import com.techtest.techtest.service.exception.PaymentProcessingException;
+import com.techtest.techtest.model.PaymentType;
 import com.techtest.techtest.model.Account;
 import com.techtest.techtest.model.Payment;
 import com.techtest.techtest.repository.AccountRepository;
@@ -27,50 +28,52 @@ public class PaymentService {
     @Autowired
     private ExternalLoggingService externalLoggingService;
 
-    public void process(PaymentEvent event){
+    public void process(PaymentEvent event) {
         try {
-            var account = updateLastPaymentDateAndGet(event.getAccount_id());
+            var account = updateLastPaymentDateAndGet(event);
             var payment = map(event, account);
             processPayment(payment);
         } catch (PaymentProcessingException e) {
-            e.setPaymentId(event.getPayment_id());
-            logger.error(e.getMessage());
             externalLoggingService.logError(e);
-        } catch (Exception e){
-            var error = PaymentProcessingException.otherTypeError(event.getPayment_id(), "Internal unhandled exception: " + e.getMessage());
-            logger.error(error.getMessage());
-            externalLoggingService.logError(error);
+        } catch (Exception e) {
+            externalLoggingService.logError(
+                    PaymentProcessingException.otherTypeError(event.getPayment_id(),
+                            "Internal unhandled exception: " + e.getMessage()));
         }
     }
 
     public void processPayment(Payment payment) throws Exception {
-        if(payment.getPaymentType().equals("offline")){//TODO: use enum
-            paymentRepository.save(payment);
-        }
-        if(payment.getPaymentType().equals("online")){
-            if(validator.validate(payment)){
-                paymentRepository.save(payment);
+        switch (payment.getPaymentType()) {
+            case OFFLINE -> save(payment);
+            case ONLINE -> {
+                if (validator.validate(payment))
+                    save(payment);
             }
         }
+    }
+
+    private void save(Payment payment) {
+        accountRepository.save(payment.getAccount());
+        paymentRepository.save(payment);
     }
 
     private static Payment map(PaymentEvent paymentEvent, Account account) {
         return Payment.builder()
                 .paymentId(paymentEvent.getPayment_id())
-                .paymentType(paymentEvent.getPayment_type())
+                .paymentType(PaymentType.valueOf(paymentEvent.getPayment_type().toUpperCase()))
                 .account(account)
                 .creditCard(paymentEvent.getCredit_card())
                 .amount(paymentEvent.getAmount())
                 .build();
     }
 
-    private Account updateLastPaymentDateAndGet(Integer accountId) throws Exception {
-        Optional<Account> accountOpt = accountRepository.findById(accountId);
+    private Account updateLastPaymentDateAndGet(PaymentEvent event) throws Exception {
+        Optional<Account> accountOpt = accountRepository.findById(event.getAccount_id());
         if (accountOpt.isEmpty()) {
-            throw PaymentProcessingException.databaseTypeError(null, "account with id: " + accountId+ " not found");
+            throw PaymentProcessingException.databaseTypeError(event.getPayment_id(), "account with id: " + event.getAccount_id() + " not found");
         }
         Account account = accountOpt.get();
         account.setLastPaymentDate(new Date());
-        return accountRepository.save(account);
+        return account;
     }
 }

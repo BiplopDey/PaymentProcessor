@@ -24,8 +24,9 @@ public class Payment {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_type", length = 150, nullable = false)
-    private String paymentType;
+    private PaymentType paymentType;
 
     @Column(name = "credit_card", length = 100)
     private String creditCard;

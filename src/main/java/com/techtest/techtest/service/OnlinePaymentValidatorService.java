@@ -1,29 +1,33 @@
 package com.techtest.techtest.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.techtest.techtest.PaymentProcessingException;
+import com.techtest.techtest.service.exception.PaymentProcessingException;
+import com.techtest.techtest.model.PaymentType;
 import com.techtest.techtest.RestCallUtil;
 import com.techtest.techtest.model.Payment;
 import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 @Component
 public class OnlinePaymentValidatorService {
+    @Value("${validatorUrl}")
+    private String url;
+
     @Autowired
     private RestCallUtil rest;
-    private final String url = "http://localhost:9000/payment"; //TODO: inject from properties
 
     public boolean validate(Payment payment) throws Exception {
-        if(!payment.getPaymentType().equals("online")){
+        if (payment.getPaymentType().equals(PaymentType.OFFLINE)) {
             throw new IllegalArgumentException("Payment should be type online for external validation");
         }
-        try{
+        try {
             return rest.post(url, map(payment)).isOk();
-        } catch (Exception e){
-            throw PaymentProcessingException.networkTypeError(payment.getPaymentId(), "network failed to validate. message:"+ e.getMessage());
+        } catch (Exception e) {
+            throw PaymentProcessingException.networkTypeError(payment.getPaymentId(), "network failed to validate. message:" + e.getMessage());
         }
     }
 

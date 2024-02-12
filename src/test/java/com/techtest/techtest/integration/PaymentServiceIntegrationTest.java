@@ -1,9 +1,12 @@
 package com.techtest.techtest.integration;
 
 import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.consumer.PaymentConsumer;
+import com.techtest.techtest.model.Account;
+import com.techtest.techtest.repository.AccountRepository;
 import com.techtest.techtest.repository.PaymentRepository;
 import com.techtest.techtest.service.ExternalLoggingService;
-import com.techtest.techtest.service.PaymentService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,71 +18,97 @@ import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class PaymentServiceIntegrationTest {
 
     @Autowired
-    PaymentService paymentService;
+    private PaymentConsumer paymentConsumer;
 
     @Autowired
-    PaymentRepository paymentRepository;
+    private PaymentRepository paymentRepository;
 
     @Autowired
-    TestRestTemplate restTemplate;
+    private AccountRepository accountRepository;
 
-    @Test
-    public void consume_offline_valid_payment_event() {
-        PaymentEvent event = getValidOfflinePayment(UUID.randomUUID().toString());
+    @Autowired
+    private TestRestTemplate restTemplate;
 
-        paymentService.process(event);
+    @BeforeEach
+    public void databaseSetup() {
+        paymentRepository.deleteAll();
 
-        Assert.isTrue(paymentRepository.findById(event.getPayment_id()).isPresent(), "s");
+        List<Account> accounts = accountRepository.findAll();
+        accounts.forEach(account -> account.setLastPaymentDate(null));
+        accountRepository.saveAll(accounts);
     }
 
     @Test
-    public void consume_online_valid_payment_event() {
-        PaymentEvent event = getFailedNetworkValidation();
-        event.setPayment_id(UUID.randomUUID().toString());
+    public void consume_invalid_payment_event() {
+        var event = getValidOfflinePayment();
+        event.setAmount(null);
 
-        paymentService.process(event);
+        paymentConsumer.consume(event);
 
-        Assert.isTrue(paymentRepository.findById(event.getPayment_id()).isPresent(), "s");
-    }
-
-    @Test
-    public void consume_online_payment_reject_external_validation() {
-        PaymentEvent event = getFailedNetworkValidation();
-
-        paymentService.process(event);
-
-        Assert.isTrue(paymentRepository.findById(event.getPayment_id()).isEmpty(), "s");
+        assertTrue(paymentRepository.findById(event.getPayment_id()).isEmpty());
         assertItsLogged(event.getPayment_id());
     }
 
 
-    private PaymentEvent getValidOnlinePayment(){
-        PaymentEvent event = new PaymentEvent();
-        event.setPayment_id("a629717b-f2cb-427f-8739-10251c029f42");
-        event.setPayment_type("online");
-        event.setAccount_id(1560);
-        event.setCredit_card("4573145229078665562");
-        event.setAmount(BigDecimal.valueOf(38));
+    @Test
+    public void consume_offline_valid_payment_event() {
+        var event = getValidOfflinePayment();
+
+        paymentConsumer.consume(event);
+
+        assertTrue(paymentRepository.findById(event.getPayment_id()).isPresent());
+        var account = accountRepository.findById(event.getAccount_id()).get();
+        assertTrue(Objects.nonNull(account.getLastPaymentDate()));
+    }
+
+    @Test
+    public void consume_online_valid_payment_event() {
+        var event = getValidOnlinePayment();
+
+        paymentConsumer.consume(event);
+
+        assertTrue(paymentRepository.findById(event.getPayment_id()).isPresent());
+    }
+
+    @Test
+    public void consume_online_payment_reject_external_validation() {
+        var event = getFailedNetworkValidation();
+
+        paymentConsumer.consume(event);
+
+        assertTrue(paymentRepository.findById(event.getPayment_id()).isEmpty());
+        assertItsLogged(event.getPayment_id());
+        var account = accountRepository.findById(event.getAccount_id()).get();
+        assertTrue(Objects.isNull(account.getLastPaymentDate()));
+    }
+
+
+    private PaymentEvent getValidOnlinePayment() {
+        var event = getFailedNetworkValidation();
+        event.setPayment_id(UUID.randomUUID().toString());
         return event;
     }
 
-    private PaymentEvent getValidOfflinePayment(String id) {
-        PaymentEvent event = new PaymentEvent();
-        event.setPayment_id(id);
+    private PaymentEvent getValidOfflinePayment() {
+        var event = new PaymentEvent();
+        event.setPayment_id(UUID.randomUUID().toString());
         event.setPayment_type("offline");
         event.setAccount_id(872);
         event.setAmount(BigDecimal.valueOf(9));
         return event;
     }
 
-    private PaymentEvent getFailedNetworkValidation(){
-        PaymentEvent event = new PaymentEvent();
+    private PaymentEvent getFailedNetworkValidation() {
+        var event = new PaymentEvent();
         event.setPayment_id("d0379b71-bd43-454d-9b98-0927cd189bc8");
         event.setPayment_type("online");
         event.setAccount_id(1561);
@@ -94,8 +123,7 @@ public class PaymentServiceIntegrationTest {
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<ExternalLoggingService.ErrorModel>>() {
-                }
-        );
+                });
 
         List<ExternalLoggingService.ErrorModel> logs = response.getBody();
         boolean isLogged = logs.stream()

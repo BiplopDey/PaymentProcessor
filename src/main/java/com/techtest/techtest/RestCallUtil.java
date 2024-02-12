@@ -11,7 +11,7 @@ public class RestCallUtil {
     @Autowired
     private RestTemplate restTemplate;
 
-    public <T> Status post(String url, T request){
+    public <T> Status post(String url, T request) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<T> entity = new HttpEntity<>(request, headers);
@@ -20,11 +20,11 @@ public class RestCallUtil {
     }
 
     @AllArgsConstructor
-    public static class Status{
+    public static class Status {
         private final int code;
 
-        public boolean isOk(){
-            return 200<=code && code < 300;
+        public boolean isOk() {
+            return 200 <= code && code < 300;
         }
     }
 }
