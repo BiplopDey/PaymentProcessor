@@ -1,9 +1,9 @@
 package com.techtest.techtest.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.techtest.techtest.PaymentEvent;
 import com.techtest.techtest.PaymentProcessingException;
 import com.techtest.techtest.RestCallUtil;
+import com.techtest.techtest.model.Payment;
 import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,23 +15,26 @@ import java.math.BigDecimal;
 public class OnlinePaymentValidatorService {
     @Autowired
     private RestCallUtil rest;
+    private final String url = "http://localhost:9000/payment"; //TODO: inject from properties
 
-    public boolean validate(PaymentEvent paymentEvent) throws Exception {
-        String url = "http://localhost:9000/payment"; //TODO: inject from properties
+    public boolean validate(Payment payment) throws Exception {
+        if(!payment.getPaymentType().equals("online")){
+            throw new IllegalArgumentException("Payment should be type online for external validation");
+        }
         try{
-            ResponseEntity<String> response = rest.post(url, map(paymentEvent));
+            ResponseEntity<String> response = rest.post(url, map(payment));
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e){
-            throw PaymentProcessingException.networkTypeError(paymentEvent.getPayment_id(), "network failed to validate. message:"+ e.getMessage());
+            throw PaymentProcessingException.networkTypeError(payment.getPaymentId(), "network failed to validate. message:"+ e.getMessage());
         }
     }
 
-    private PaymentRequest map(PaymentEvent paymentEvent) {
+    private PaymentRequest map(Payment payment) {
         return PaymentRequest.builder()
-                .paymentId(paymentEvent.getPayment_id())
-                .accountId(paymentEvent.getAccount_id())
-                .creditCard(paymentEvent.getCredit_card())
-                .amount(paymentEvent.getAmount())
+                .paymentId(payment.getPaymentId())
+                .accountId(payment.getAccount().getAccountId())
+                .creditCard(payment.getCreditCard())
+                .amount(payment.getAmount())
                 .build();
     }
 

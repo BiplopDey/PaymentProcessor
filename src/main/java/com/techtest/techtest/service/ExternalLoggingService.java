@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.techtest.techtest.PaymentProcessingException;
 import com.techtest.techtest.RestCallUtil;
 import lombok.Builder;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,8 @@ public class ExternalLoggingService {
     }
 
     @Builder
-    private static class ErrorModel{
+    @Getter
+    public static class ErrorModel{
         @JsonProperty("payment_id")
         private String paymentId;
 

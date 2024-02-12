@@ -14,8 +14,8 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @Service
-public class PaymentConsumerService {
-    private final Logger logger = LoggerFactory.getLogger(PaymentConsumerService.class);
+public class ConsumerService {
+    private final Logger logger = LoggerFactory.getLogger(ConsumerService.class);
 
     @Autowired
     private PaymentService paymentService;
@@ -24,33 +24,27 @@ public class PaymentConsumerService {
 
     @KafkaListener(topics = {"online", "offline"}, groupId = "group_id", containerFactory = "kafkaListenerContainerFactory")
     public void consume(PaymentEvent event) {
-        try {
-            validate(event);
-            logger.info(event.toString());
-            paymentService.process(event);
-        } catch (PaymentProcessingException e) {
-            e.setPaymentId(event.getPayment_id());
-            logger.error(e.getMessage());
-            externalLoggingService.logError(e);
-        } catch (Exception e){
-            var error = PaymentProcessingException.otherTypeError(event.getPayment_id(), "Internal unhandled exception: " + e.getMessage());
-            logger.error(error.getMessage());
+        logger.info(event.toString());
+        if(!isValid(event)){
+           var error =  PaymentProcessingException.otherTypeError(event.getPayment_id(), "Invalid payment event");
             externalLoggingService.logError(error);
+            return;
         }
+        paymentService.process(event);
     }
 
-    private void validate(PaymentEvent event) throws Exception {
+    private boolean isValid(PaymentEvent event){
         boolean isValid = nonNull(event.getPayment_id())
                 && nonNull(event.getAccount_id())
                 && nonNull(event.getPayment_type())
                 && nonNull(event.getAmount())
                 && List.of("online", "offline").contains(event.getPayment_type());
-        var error = PaymentProcessingException.otherTypeError(event.getPayment_id(), "Invalid payment event");
         if (!isValid) {
-            throw error;
+            return false;
         }
         if (event.getPayment_type().equals("online") && isNull(event.getCredit_card())) {
-            throw error;
+            return false;
         }
+        return true;
     }
 }
