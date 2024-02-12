@@ -6,7 +6,6 @@ import com.techtest.techtest.RestCallUtil;
 import com.techtest.techtest.model.Payment;
 import lombok.Builder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -22,8 +21,7 @@ public class OnlinePaymentValidatorService {
             throw new IllegalArgumentException("Payment should be type online for external validation");
         }
         try{
-            ResponseEntity<String> response = rest.post(url, map(payment));
-            return response.getStatusCode().is2xxSuccessful();
+            return rest.post(url, map(payment)).isOk();
         } catch (Exception e){
             throw PaymentProcessingException.networkTypeError(payment.getPaymentId(), "network failed to validate. message:"+ e.getMessage());
         }

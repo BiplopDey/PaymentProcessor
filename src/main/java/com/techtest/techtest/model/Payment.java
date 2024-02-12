@@ -1,10 +1,7 @@
 package com.techtest.techtest.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -13,6 +10,7 @@ import java.util.Date;
 @Entity
 @Table(name = "payments")
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
