@@ -1,8 +1,7 @@
 package com.techtest.techtest.service;
 
-import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.consumer.PaymentEvent;
 import com.techtest.techtest.service.exception.PaymentProcessingException;
-import com.techtest.techtest.model.PaymentType;
 import com.techtest.techtest.model.Account;
 import com.techtest.techtest.model.Payment;
 import com.techtest.techtest.repository.AccountRepository;
@@ -28,52 +27,40 @@ public class PaymentService {
     @Autowired
     private ExternalLoggingService externalLoggingService;
 
-    public void process(PaymentEvent event) {
+    public void process(Payment payment) {
         try {
-            var account = updateLastPaymentDateAndGet(event);
-            var payment = map(event, account);
             processPayment(payment);
         } catch (PaymentProcessingException e) {
             externalLoggingService.logError(e);
         } catch (Exception e) {
             externalLoggingService.logError(
-                    PaymentProcessingException.otherTypeError(event.getPayment_id(),
+                    PaymentProcessingException.otherTypeError(payment.getPaymentId(),
                             "Internal unhandled exception: " + e.getMessage()));
         }
     }
 
     public void processPayment(Payment payment) throws Exception {
         switch (payment.getPaymentType()) {
-            case OFFLINE -> save(payment);
+            case OFFLINE -> updateAccountAndSavePayment(payment);
             case ONLINE -> {
                 if (validator.validate(payment))
-                    save(payment);
+                    updateAccountAndSavePayment(payment);
             }
         }
     }
 
-    private void save(Payment payment) {
-        accountRepository.save(payment.getAccount());
+    private void updateAccountAndSavePayment(Payment payment) throws Exception {
+        var account = updateAccountLastPaymentDate(payment);
+        payment.setAccount(account);
         paymentRepository.save(payment);
     }
 
-    private static Payment map(PaymentEvent paymentEvent, Account account) {
-        return Payment.builder()
-                .paymentId(paymentEvent.getPayment_id())
-                .paymentType(PaymentType.valueOf(paymentEvent.getPayment_type().toUpperCase()))
-                .account(account)
-                .creditCard(paymentEvent.getCredit_card())
-                .amount(paymentEvent.getAmount())
-                .build();
-    }
-
-    private Account updateLastPaymentDateAndGet(PaymentEvent event) throws Exception {
-        Optional<Account> accountOpt = accountRepository.findById(event.getAccount_id());
-        if (accountOpt.isEmpty()) {
-            throw PaymentProcessingException.databaseTypeError(event.getPayment_id(), "account with id: " + event.getAccount_id() + " not found");
-        }
-        Account account = accountOpt.get();
+    private Account updateAccountLastPaymentDate(Payment payment) throws Exception {
+        var account = accountRepository.findById(payment.getAccount().getAccountId())
+                .orElseThrow(()->PaymentProcessingException.databaseTypeError(
+                        payment.getPaymentId(),
+                        "account with id: " + payment.getAccount().getAccountId() + " not found"));
         account.setLastPaymentDate(new Date());
-        return account;
+        return accountRepository.save(account);
     }
 }

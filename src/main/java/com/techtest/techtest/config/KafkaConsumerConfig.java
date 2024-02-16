@@ -1,6 +1,6 @@
 package com.techtest.techtest.config;
 
-import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.consumer.PaymentEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;

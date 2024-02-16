@@ -1,6 +1,6 @@
 package com.techtest.techtest.integration;
 
-import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.consumer.PaymentEvent;
 import com.techtest.techtest.consumer.PaymentConsumer;
 import com.techtest.techtest.model.Account;
 import com.techtest.techtest.repository.AccountRepository;
@@ -24,7 +24,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class PaymentServiceIntegrationTest {
+public class PaymentConsumerIntegrationTest {
 
     @Autowired
     private PaymentConsumer paymentConsumer;

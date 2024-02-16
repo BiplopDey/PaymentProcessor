@@ -1,6 +1,8 @@
 package com.techtest.techtest.consumer;
 
-import com.techtest.techtest.PaymentEvent;
+import com.techtest.techtest.model.Account;
+import com.techtest.techtest.model.Payment;
+import com.techtest.techtest.model.PaymentType;
 import com.techtest.techtest.service.ExternalLoggingService;
 import com.techtest.techtest.service.PaymentService;
 import com.techtest.techtest.service.exception.PaymentProcessingException;
@@ -31,8 +33,21 @@ public class PaymentConsumer {
             externalLoggingService.logError(PaymentProcessingException.otherTypeError(event.getPayment_id(), "Invalid payment event"));
             return;
         }
-        paymentService.process(event);
+        paymentService.process(map(event));
     }
+
+    private static Payment map(PaymentEvent event) {
+        var account = new Account();
+        account.setAccountId(event.getAccount_id());
+        return Payment.builder()
+                .paymentId(event.getPayment_id())
+                .paymentType(PaymentType.valueOf(event.getPayment_type().toUpperCase()))
+                .account(account)
+                .creditCard(event.getCredit_card())
+                .amount(event.getAmount())
+                .build();
+    }
+
 
     private boolean isValid(PaymentEvent event) {
         boolean isValid = nonNull(event.getPayment_id())
