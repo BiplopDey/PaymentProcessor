@@ -1,18 +1,16 @@
 package com.techtest.techtest.service;
 
-import com.techtest.techtest.consumer.PaymentEvent;
-import com.techtest.techtest.service.exception.PaymentProcessingException;
 import com.techtest.techtest.model.Account;
 import com.techtest.techtest.model.Payment;
 import com.techtest.techtest.repository.AccountRepository;
 import com.techtest.techtest.repository.PaymentRepository;
+import com.techtest.techtest.service.exception.PaymentProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.Optional;
 
 @Service
 public class PaymentService {
